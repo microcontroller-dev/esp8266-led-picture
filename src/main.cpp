@@ -2,11 +2,8 @@
 #include <ESP8266WiFi.h>
 #include <ESPAsyncTCP.h>
 #include <ESPAsyncWebServer.h>
-#include <FS.h>
-#include <LittleFS.h>
 #include <ESP8266mDNS.h>
 #include <AsyncElegantOTA.h>
-#include <ArduinoJson.h>
 
 
 #define LED_1 D1 // GPIO 5
@@ -151,12 +148,6 @@ void setup() {
   pinMode(LED2pin, OUTPUT);
   pinMode(LED3pin, OUTPUT);
 
-
-
-  if(!LittleFS.begin()){
-    Serial.println("Console > An error has occured while mounting LittleFS");
-    return;
-  }
 
   if (!MDNS.begin("blackleakz")) {
     Serial.println("Error setting up MDNS responder!");
