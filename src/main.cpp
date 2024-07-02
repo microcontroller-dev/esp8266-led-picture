@@ -16,8 +16,11 @@
 uint8_t LED1pin = D1;
 bool LED1status = LOW;
 
-uint8_t LED2pin = D6;
+uint8_t LED2pin = D2;
 bool LED2status = LOW;
+
+uint8_t LED3pin = D4;
+bool LED3status = LOW;
 
 const char* ssid     = "BLACKLEAKZ-AP";
 const char* password = "123456789";
@@ -28,44 +31,7 @@ AsyncWebServer server(80);
 
 
 
-
-const char index_html[] PROGMEM = R"rawliteral(
-  <!DOCTYPE HTML><html>
-  <head>
-  <title>LED-Picture || Control Panel</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" href="data:,">
-  <style>
-    html {font-family: Arial; display: inline-block; text-align: center;}
-    h2 {font-size: 3.0rem;}
-    p {font-size: 3.0rem;}
-    body {max-width: 600px; margin:0px auto; padding-bottom: 25px;}
-    .switch {position: relative; display: inline-block; width: 120px; height: 68px} 
-    .switch input {display: none}
-    .slider {position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 6px}
-    .slider:before {position: absolute; content: ""; height: 52px; width: 52px; left: 8px; bottom: 8px; background-color: #fff; -webkit-transition: .4s; transition: .4s; border-radius: 3px}
-    input:checked+.slider {background-color: #b30000}
-    input:checked+.slider:before {-webkit-transform: translateX(52px); -ms-transform: translateX(52px); transform: translateX(52px)}
-  </style>
-</head>
-<body>
-
-  <h2>ESP Web Server</h2>
-
- <a href="/update">
-  <center><button>Light ON</button></center>
-</a>
-
-<center><p>LED1 Status: ON</p><a class=\"button button-off\" href=\"/led1off\">OFF</a></center>
-<center><p>LED1 Status: OFF</p><a class=\"button button-on\" href=\"/led1on\">ON</a></center>
-<center><p>LED2 Status: ON</p><a class=\"button button-off\" href=\"/led2off\">OFF</a></center>
-<center><p>LED2 Status: OFF</p><a class=\"button button-on\" href=\"/led2on\">ON</a></center>
-</body>
-</html>
-)rawliteral";
-
-
-String SendHTML(uint8_t led1stat,uint8_t led2stat){
+String SendHTML(uint8_t led1stat,uint8_t led2stat, uint8_t led3stat){
   String ptr = "<!DOCTYPE html> <html>\n";
   ptr +="<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">\n";
   ptr +="<title>LED Control</title>\n";
@@ -93,6 +59,11 @@ String SendHTML(uint8_t led1stat,uint8_t led2stat){
   else
   {ptr +="<p>LED2 Status: OFF</p><a class=\"button button-on\" href=\"/led2on\">ON</a>\n";}
 
+  if(led3stat)
+  {ptr +="<p>LED3 Status: ON</p><a class=\"button button-off\" href=\"/led3off\">OFF</a>\n";}
+  else
+  {ptr +="<p>LED3 Status: OFF</p><a class=\"button button-on\" href=\"/led3on\">ON</a>\n";}
+
   ptr +="</body>\n";
   ptr +="</html>\n";
   return ptr;
@@ -111,28 +82,9 @@ void setup() {
   delay(300);
   digitalWrite(LED_BUILTIN, HIGH);
 
-  pinMode(LED_1, OUTPUT);
-  digitalWrite(LED_1, LOW);
-  delay(300);
-  digitalWrite(LED_1, HIGH);
-
-  pinMode(5, OUTPUT);
-  digitalWrite(5, LOW);
-  delay(300);
-  digitalWrite(5, HIGH);
-
-  pinMode(LED_2, OUTPUT);
-  digitalWrite(LED_2, LOW);
-  delay(300);
-  digitalWrite(LED_2, HIGH);
-
-  pinMode(LED_3, OUTPUT);
-  digitalWrite(LED_3, LOW);
-  delay(300);
-  digitalWrite(LED_3, HIGH);
-
   pinMode(LED1pin, OUTPUT);
   pinMode(LED2pin, OUTPUT);
+  pinMode(LED3pin, OUTPUT);
 
 
 
@@ -140,9 +92,6 @@ void setup() {
     Serial.println("Console > An error has occured while mounting LittleFS");
     return;
   }
-
-
-
 
 
 
@@ -155,77 +104,60 @@ void setup() {
   Serial.println(WiFi.localIP());
 
 
- //server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-  //  request->send_P(200, "text/html", index_html);
-  //});
 
 
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(200, "text/html", SendHTML(LED1status,LED2status));
+    request->send(200, "text/html", SendHTML(LED1status,LED2status,LED3status));
       LED1status = LOW;
       LED2status = LOW;
+      LED3status = LOW;
       Serial.println("GPIO7 Status: OFF | GPIO6 Status: OFF");
-
   });
 
  
 
   server.on("/led1on", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(200, "text/html", SendHTML(true,LED2status));
-    LED1status = HIGH;
-    Serial.println("GPIO7 Status: ON");
+    request->send(200, "text/html", SendHTML(true,LED2status, LED3status));
+      LED1status = HIGH;
+      Serial.println("GPIO7 Status: ON");
   });
 
 
 
   server.on("/led1off", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(200, "text/html", SendHTML(false,LED2status));
-    LED1status = LOW;
-    Serial.println("GPIO7 Status: OFF");
+    request->send(200, "text/html", SendHTML(false,LED2status, LED3status));
+      LED1status = LOW;
+      Serial.println("GPIO7 Status: OFF");
   });
   
   server.on("/led2on", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(200, "text/html", SendHTML(LED1status,true));
-    LED1status = HIGH;
-    Serial.println("GPIO7 Status: ON");
+    request->send(200, "text/html", SendHTML(LED1status, LED3status,true));
+      LED1status = HIGH;
+      Serial.println("GPIO7 Status: ON");
   });
 
 
 
   server.on("/led2off", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(200, "text/html", SendHTML(LED1status,false));
-    LED1status = LOW;
-    Serial.println("GPIO7 Status: OFF");
+    request->send(200, "text/html", SendHTML(LED1status, LED3status,false));
+      LED1status = LOW;
+      Serial.println("GPIO7 Status: OFF");
   });
   
-
-
-
-  server.on("/update", HTTP_GET, [] (AsyncWebServerRequest *request) {
-      digitalWrite(LED_1, LOW);
-      delay(500);
-      digitalWrite(LED_1, HIGH);
-      delay(1000);
-      digitalWrite(LED_1, LOW);
-
-      delay(300);
-      digitalWrite(5, LOW);
-      delay(500);
-      digitalWrite(5, HIGH);
-      delay(1000);
-      digitalWrite(5, LOW);
- 
+  server.on("/led3on", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/html", SendHTML(LED2status, LED1status,true));
+      LED1status = HIGH;
+      Serial.println("GPIO7 Status: ON");
   });
 
 
 
-
-
-
-
-
-
-
+  server.on("/led3off", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/html", SendHTML(LED2status, LED1status, false));
+      LED3status = LOW;
+      Serial.println("GPIO7 Status: OFF");
+  });
+  
   server.begin();
 }
  
@@ -233,8 +165,6 @@ void setup() {
 
 
 void loop(){  
-
-
 if(LED1status)
   {digitalWrite(LED1pin, HIGH);}
   else
@@ -244,6 +174,11 @@ if(LED1status)
   {digitalWrite(LED2pin, HIGH);}
   else
   {digitalWrite(LED2pin, LOW);}
+
+  if(LED3status)
+  {digitalWrite(LED3pin, HIGH);}
+  else
+  {digitalWrite(LED3pin, LOW);}
 }
 
 
