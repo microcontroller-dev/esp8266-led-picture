@@ -5,6 +5,7 @@
 #include <FS.h>
 #include <LittleFS.h>
 #include <ESP8266mDNS.h>
+#include <AsyncElegantOTA.h>
 #include <ArduinoJson.h>
 
 
@@ -22,12 +23,17 @@ bool LED2status = LOW;
 uint8_t LED3pin = D4;
 bool LED3status = LOW;
 
+
+
+
 const char* ssid     = "BLACKLEAKZ-AP";
 const char* password = "123456789";
 
-
+#define mDns = "blackleakz"
 
 AsyncWebServer server(80);
+
+
 
 
 
@@ -46,7 +52,7 @@ String SendHTML(uint8_t led1stat,uint8_t led2stat, uint8_t led3stat){
   ptr +="</style>\n";
   ptr +="</head>\n";
   ptr +="<body>\n";
-  ptr +="<h1>ESP8266 Web Server</h1>\n";
+  ptr +="<h1>ESP8266 Web Server || LED Control</h1>\n";
   ptr +="<h3>Using Access Point(AP) Mode</h3>\n";
   
    if(led1stat)
@@ -68,6 +74,65 @@ String SendHTML(uint8_t led1stat,uint8_t led2stat, uint8_t led3stat){
   ptr +="</html>\n";
   return ptr;
 }
+
+
+
+
+void URLHandler() {
+  // AsyncWebserver URI/Route Handler
+
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/html", SendHTML(LED1status,LED2status,LED3status));
+      LED1status = LOW;
+      LED2status = LOW;
+      LED3status = LOW;
+      Serial.println("GPIO 2 Status: OFF | GPIO4 Status: OFF || GPIO5 Status: OFF");
+  });
+
+
+  server.on("/led1on", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/html", SendHTML(true,LED2status, LED3status));
+      LED1status = HIGH;
+      Serial.println("GPIO5 Status: ON");
+  });
+
+  server.on("/led1off", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/html", SendHTML(false,LED2status, LED3status));
+      LED1status = LOW;
+      Serial.println("GPIO5 Status: OFF");
+  });
+  
+  server.on("/led2on", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/html", SendHTML(LED1status, LED3status,true));
+      LED2status = HIGH;
+      Serial.println("GPIO4 Status: ON");
+  });
+
+  server.on("/led2off", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/html", SendHTML(LED1status, LED3status,false));
+      LED2status = LOW;
+      Serial.println("GPIO4 Status: OFF");
+  });
+  
+  server.on("/led3on", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/html", SendHTML(LED2status, LED1status,true));
+      LED3status = HIGH;
+      Serial.println("GPIO2 Status: ON");
+  });
+
+  server.on("/led3off", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/html", SendHTML(LED2status, LED1status, false));
+      LED3status = LOW;
+      Serial.println("GPIO2 Status: OFF");
+  });
+  
+
+
+  server.begin();
+}
+
+
+
 
 
 
@@ -93,6 +158,13 @@ void setup() {
     return;
   }
 
+  if (!MDNS.begin("blackleakz")) {
+    Serial.println("Error setting up MDNS responder!");
+    while (1) {
+      delay(356);
+      }
+    }
+  Serial.println("mDNS responder started");
 
 
   WiFi.softAP(ssid, password);
@@ -103,82 +175,46 @@ void setup() {
 
   Serial.println(WiFi.localIP());
 
+  AsyncElegantOTA.begin(&server);
+  URLHandler();
 
-
-
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(200, "text/html", SendHTML(LED1status,LED2status,LED3status));
-      LED1status = LOW;
-      LED2status = LOW;
-      LED3status = LOW;
-      Serial.println("GPIO7 Status: OFF | GPIO6 Status: OFF");
-  });
-
- 
-
-  server.on("/led1on", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(200, "text/html", SendHTML(true,LED2status, LED3status));
-      LED1status = HIGH;
-      Serial.println("GPIO7 Status: ON");
-  });
-
-
-
-  server.on("/led1off", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(200, "text/html", SendHTML(false,LED2status, LED3status));
-      LED1status = LOW;
-      Serial.println("GPIO7 Status: OFF");
-  });
   
-  server.on("/led2on", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(200, "text/html", SendHTML(LED1status, LED3status,true));
-      LED1status = HIGH;
-      Serial.println("GPIO7 Status: ON");
-  });
-
-
-
-  server.on("/led2off", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(200, "text/html", SendHTML(LED1status, LED3status,false));
-      LED1status = LOW;
-      Serial.println("GPIO7 Status: OFF");
-  });
-  
-  server.on("/led3on", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(200, "text/html", SendHTML(LED2status, LED1status,true));
-      LED1status = HIGH;
-      Serial.println("GPIO7 Status: ON");
-  });
-
-
-
-  server.on("/led3off", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(200, "text/html", SendHTML(LED2status, LED1status, false));
-      LED3status = LOW;
-      Serial.println("GPIO7 Status: OFF");
-  });
-  
-  server.begin();
 }
  
 
 
 
 void loop(){  
-if(LED1status)
-  {digitalWrite(LED1pin, HIGH);}
+
+   MDNS.update();
+
+
+  if(LED1status) 
+  {
+    digitalWrite(LED1pin, HIGH);
+  }
   else
-  {digitalWrite(LED1pin, LOW);}
+  {
+    digitalWrite(LED1pin, LOW);
+  }
   
   if(LED2status)
-  {digitalWrite(LED2pin, HIGH);}
+  {
+    digitalWrite(LED2pin, HIGH);
+  }
   else
-  {digitalWrite(LED2pin, LOW);}
+  {
+    digitalWrite(LED2pin, LOW);
+  }
 
   if(LED3status)
-  {digitalWrite(LED3pin, HIGH);}
+  {
+    digitalWrite(LED3pin, HIGH);
+  }
   else
-  {digitalWrite(LED3pin, LOW);}
+  {
+    digitalWrite(LED3pin, LOW);
+  }
 }
 
 
